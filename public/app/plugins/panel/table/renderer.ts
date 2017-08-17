@@ -83,6 +83,15 @@ export class TableRenderer {
       };
     }
 
+    if (column.style.type === 'regexrep') {
+        console.log(column.style);
+        //let regexp1 = column.style.regexrep.split("/");
+        return v => {
+            console.log(v);
+            return v.replace(/bl[a-z]{2}\_/,"");
+        };
+    }
+
     if (column.style.type === 'date') {
       return v => {
         if (v === undefined || v === null) {

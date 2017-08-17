@@ -41,6 +41,9 @@ class TablePanelCtrl extends MetricsPanelCtrl {
         colorMode: null,
         pattern: '/.*/',
         thresholds: [],
+      },
+      {
+        type: 'regexrep'
       }
     ],
     columns: [],

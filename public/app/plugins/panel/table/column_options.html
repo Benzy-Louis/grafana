@@ -91,6 +91,13 @@
         </div>
       </div>
     </div>
+    
+    <div class="gf-form"  ng-if="style.type === 'regexrep'">
+        <div class="gf-form">
+            <label class="gf-form-label width-11">Regex</label>
+            <input type="text" class="gf-form-input width-13" data-placement="right" ng-model="style.regexrep" ng-change="editor.render()" ng-model-onblur>
+        </div>
+    </div>
 
     <div class="section gf-form-group" ng-if="style.link">
       <h5 class="section-heading">Link</h5>
