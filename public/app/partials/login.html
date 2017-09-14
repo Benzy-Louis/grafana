@@ -10,21 +10,21 @@
     <div class="login-inner-box">
 			<div class="login-tab-header">
 				<button class="btn-login-tab" ng-click="loginMode = true;" ng-class="{active: loginMode}">
-					Log in
+					{{ 'Log in' | translate }}
 				</button>
 				<button class="btn-login-tab" ng-click="loginMode = false;" ng-class="{active: !loginMode}" ng-show="!disableUserSignUp">
-					Sign up
+					{{ 'Sign up' | translate }}
 				</button>
 			</div>
 
       <form name="loginForm" class="login-form gf-form-group" ng-hide="disableLoginForm">
 				<div class="gf-form" ng-if="loginMode">
-					<span class="gf-form-label width-7">User</span>
-					<input type="text" name="username" class="gf-form-input max-width-14" required ng-model='formModel.user' placeholder={{loginHint}} autofocus>
+					<span class="gf-form-label width-7">{{'User' | translate}}</span>
+					<input type="text" name="username" class="gf-form-input max-width-14" required ng-model='formModel.user' placeholder="{{'email or username' | translate}}" autofocus>
 				</div>
 				<div class="gf-form" ng-if="loginMode">
-					<span class="gf-form-label width-7">Password</span>
-					<input type="password" name="password" class="gf-form-input max-width-14" required ng-model="formModel.password" id="inputPassword" placeholder="password">
+					<span class="gf-form-label width-7">{{'Password' | translate }}</span>
+					<input type="password" name="password" class="gf-form-input max-width-14" required ng-model="formModel.password" id="inputPassword" placeholder="{{'Password' | translate | lowercase }}">
 				</div>
 
 				<div class="gf-form" ng-if="!loginMode">
@@ -34,7 +34,7 @@
 
 				<div class="gf-form-button-row">
 					<button type="submit" class="btn btn-large p-x-3" ng-click="submit();" ng-class="{'btn-inverse': !loginForm.$valid, 'btn-primary': loginForm.$valid}">
-						{{submitBtnText}}
+						{{submitBtnText | translate }}
 					</button>
 				</div>
 			</form>
@@ -76,7 +76,7 @@
 		<div class="text-center password-recovery" ng-hide="disableLoginForm">
 			<div class="text-center">
 				<a href="user/password/send-reset-email">
-					Forgot your password?
+					{{ 'Forgot your password?' | translate }}
 				</a>
 			</div>
 		</div>

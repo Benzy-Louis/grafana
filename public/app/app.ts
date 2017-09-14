@@ -14,6 +14,7 @@ import 'ngreact';
 import 'vendor/bootstrap/bootstrap';
 import 'vendor/angular-ui/ui-bootstrap-tpls';
 import 'vendor/angular-other/angular-strap';
+import 'vendor/angular-translate/angular-translate.js';
 
 import $ from 'jquery';
 import angular from 'angular';
@@ -51,7 +52,19 @@ export class GrafanaApp {
   }
 
   init() {
-    var app = angular.module('grafana', []);
+    var app = angular.module('grafana', ['pascalprecht.translate']);
+
+    app.config(['$translateProvider', function ($translateProvider) {
+      $translateProvider.translations('fr', {
+        'Forgot your password?': 'Mot de passe oublie?',
+        'User' : "Utilisateur",
+        "Password" : "Mot de passe",
+        "email or username" : "mail ou identifiant",
+        "Log in" : "Connexion"
+      });
+
+      $translateProvider.preferredLanguage('fr');
+    }]);
 
     moment.locale(config.bootData.user.locale);
 
