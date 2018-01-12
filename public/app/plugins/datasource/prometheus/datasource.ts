@@ -22,11 +22,7 @@ export class PrometheusDatasource {
   interval: string;
 
   /** @ngInject */
-  constructor(instanceSettings,
-              private $q,
-              private backendSrv,
-              private templateSrv,
-              private timeSrv) {
+  constructor(instanceSettings, private $q, private backendSrv, private templateSrv, private timeSrv) {
     this.type = 'prometheus';
     this.editorSrc = 'app/features/prometheus/partials/query.editor.html';
     this.name = instanceSettings.name;
@@ -51,7 +47,7 @@ export class PrometheusDatasource {
 
     if (this.basicAuth) {
       options.headers = {
-        "Authorization": this.basicAuth
+        Authorization: this.basicAuth,
       };
     }
 
@@ -74,6 +70,13 @@ export class PrometheusDatasource {
 
   targetContainsTemplate(target) {
     return this.templateSrv.variableExists(target.expr);
+  }
+
+  clampRange(start, end, step) {
+    return {
+      start: start - start % step,
+      end: end - end % step + step,
+    };
   }
 
   query(options) {
@@ -103,7 +106,8 @@ export class PrometheusDatasource {
 
     var allQueryPromise = _.map(queries, query => {
       if (!query.instant) {
-        return this.performTimeSeriesQuery(query, start, end);
+        let range = this.clampRange(start, end, query.step);
+        return this.performTimeSeriesQuery(query, range.start, range.end);
       } else {
         return this.performInstantQuery(query, end);
       }
@@ -117,12 +121,14 @@ export class PrometheusDatasource {
           throw response.error;
         }
 
-        if (activeTargets[index].format === "table") {
-          result.push(self.transformMetricDataToTable(response.data.data.result));
+        if (activeTargets[index].format === 'table') {
+          result.push(self.transformMetricDataToTable(response.data.data.result, responseList.length, index));
         } else {
           for (let metricData of response.data.data.result) {
             if (response.data.data.resultType === 'matrix') {
-              result.push(self.transformMetricData(metricData, activeTargets[index], start, end, queries[index].step));
+              let step = queries[index].step;
+              let range = this.clampRange(start, end, step);
+              result.push(self.transformMetricData(metricData, activeTargets[index], range.start, range.end, step));
             } else if (response.data.data.resultType === 'vector') {
               result.push(self.transformInstantMetricData(metricData, activeTargets[index]));
             }
@@ -140,7 +146,9 @@ export class PrometheusDatasource {
 
     var interval = kbn.interval_to_seconds(options.interval);
     // Minimum interval ("Min step"), if specified for the query. or same as interval otherwise
-    var minInterval = kbn.interval_to_seconds(this.templateSrv.replace(target.interval, options.scopedVars) || options.interval);
+    var minInterval = kbn.interval_to_seconds(
+      this.templateSrv.replace(target.interval, options.scopedVars) || options.interval
+    );
     var intervalFactor = target.intervalFactor || 1;
     // Adjust the interval to take into account any specified minimum and interval factor plus Prometheus limits
     var adjustedInterval = this.adjustInterval(interval, minInterval, range, intervalFactor);
@@ -149,8 +157,8 @@ export class PrometheusDatasource {
     if (interval !== adjustedInterval) {
       interval = adjustedInterval;
       scopedVars = Object.assign({}, options.scopedVars, {
-        "__interval":     {text: interval + "s",  value: interval + "s"},
-        "__interval_ms":  {text: interval * 1000, value: interval * 1000},
+        __interval: { text: interval + 's', value: interval + 's' },
+        __interval_ms: { text: interval * 1000, value: interval * 1000 },
       });
     }
     query.step = interval;
@@ -175,7 +183,15 @@ export class PrometheusDatasource {
       throw { message: 'Invalid time range' };
     }
 
-    var url = '/api/v1/query_range?query=' + encodeURIComponent(query.expr) + '&start=' + start + '&end=' + end + '&step=' + query.step;
+    var url =
+      '/api/v1/query_range?query=' +
+      encodeURIComponent(query.expr) +
+      '&start=' +
+      start +
+      '&end=' +
+      end +
+      '&step=' +
+      query.step;
     return this._request('GET', url, query.requestId);
   }
 
@@ -188,15 +204,17 @@ export class PrometheusDatasource {
     var url = '/api/v1/label/__name__/values';
 
     if (cache && this.metricsNameCache && this.metricsNameCache.expire > Date.now()) {
-      return this.$q.when(_.filter(this.metricsNameCache.data, metricName => {
-        return metricName.indexOf(query) !== 1;
-      }));
+      return this.$q.when(
+        _.filter(this.metricsNameCache.data, metricName => {
+          return metricName.indexOf(query) !== 1;
+        })
+      );
     }
 
     return this._request('GET', url).then(result => {
       this.metricsNameCache = {
         data: result.data.data,
-        expire: Date.now() + (60 * 1000)
+        expire: Date.now() + 60 * 1000,
       };
       return _.filter(result.data.data, metricName => {
         return metricName.indexOf(query) !== 1;
@@ -205,7 +223,9 @@ export class PrometheusDatasource {
   }
 
   metricFindQuery(query) {
-    if (!query) { return this.$q.when([]); }
+    if (!query) {
+      return this.$q.when([]);
+    }
 
     let interpolated = this.templateSrv.replace(query, {}, this.interpolateQueryExpr);
     var metricFindQuery = new PrometheusMetricFindQuery(this, interpolated, this.timeSrv);
@@ -219,7 +239,9 @@ export class PrometheusDatasource {
     var titleFormat = annotation.titleFormat || '';
     var textFormat = annotation.textFormat || '';
 
-    if (!expr) { return this.$q.when([]); }
+    if (!expr) {
+      return this.$q.when([]);
+    }
 
     var interpolated = this.templateSrv.replace(expr, {}, this.interpolateQueryExpr);
 
@@ -232,19 +254,21 @@ export class PrometheusDatasource {
     var end = this.getPrometheusTime(options.range.to, true);
     var query = {
       expr: interpolated,
-      step: this.adjustInterval(kbn.interval_to_seconds(step), 0, Math.ceil(end - start), 1) + 's'
+      step: this.adjustInterval(kbn.interval_to_seconds(step), 0, Math.ceil(end - start), 1),
     };
+    let range = this.clampRange(start, end, query.step);
 
     var self = this;
-    return this.performTimeSeriesQuery(query, start, end).then(function(results) {
+    return this.performTimeSeriesQuery(query, range.start, range.end).then(function(results) {
       var eventList = [];
       tagKeys = tagKeys.split(',');
 
       _.each(results.data.data.result, function(series) {
         var tags = _.chain(series.metric)
-        .filter(function(v, k) {
-          return _.includes(tagKeys, k);
-        }).value();
+          .filter(function(v, k) {
+            return _.includes(tagKeys, k);
+          })
+          .value();
 
         for (let value of series.values) {
           if (value[1] === '1') {
@@ -253,7 +277,7 @@ export class PrometheusDatasource {
               time: Math.floor(parseFloat(value[0])) * 1000,
               title: self.renderTemplate(titleFormat, series.metric),
               tags: tags,
-              text: self.renderTemplate(textFormat, series.metric)
+              text: self.renderTemplate(textFormat, series.metric),
             };
 
             eventList.push(event);
@@ -267,7 +291,7 @@ export class PrometheusDatasource {
 
   testDatasource() {
     return this.metricFindQuery('metrics(.*)').then(function() {
-      return { status: 'success', message: 'Data source is working'};
+      return { status: 'success', message: 'Data source is working' };
     });
   }
 
@@ -301,7 +325,7 @@ export class PrometheusDatasource {
     return { target: metricLabel, datapoints: dps };
   }
 
-  transformMetricDataToTable(md) {
+  transformMetricDataToTable(md, resultCount: number, resultIndex: number) {
     var table = new TableModel();
     var i, j;
     var metricLabels = {};
@@ -321,12 +345,13 @@ export class PrometheusDatasource {
 
     // Sort metric labels, create columns for them and record their index
     var sortedLabels = _.keys(metricLabels).sort();
-    table.columns.push({text: 'Time', type: 'time'});
+    table.columns.push({ text: 'Time', type: 'time' });
     _.each(sortedLabels, function(label, labelIndex) {
       metricLabels[label] = labelIndex + 1;
-      table.columns.push({text: label});
+      table.columns.push({ text: label });
     });
-    table.columns.push({text: 'Value'});
+    let valueText = resultCount > 1 ? `Value #${String.fromCharCode(65 + resultIndex)}` : 'Value';
+    table.columns.push({ text: valueText });
 
     // Populate rows, set value to empty string when label not present.
     _.each(md, function(series) {
@@ -357,7 +382,8 @@ export class PrometheusDatasource {
   }
 
   transformInstantMetricData(md, options) {
-    var dps = [], metricLabel = null;
+    var dps = [],
+      metricLabel = null;
     metricLabel = this.createMetricLabel(md.metric, options);
     dps.push([parseFloat(md.value[1]), md.value[0] * 1000]);
     return { target: metricLabel, datapoints: dps };
