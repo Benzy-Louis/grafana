@@ -4,7 +4,6 @@ import (
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/components/simplejson"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/metrics"
 	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/alerting"
 )
@@ -39,6 +38,10 @@ func NewDingDingNotifier(model *m.AlertNotification) (alerting.Notifier, error) 
 	}, nil
 }
 
+func (this *DingDingNotifier) ShouldNotify(context *alerting.EvalContext) bool {
+	return defaultShouldNotify(context)
+}
+
 type DingDingNotifier struct {
 	NotifierBase
 	Url string
@@ -47,7 +50,6 @@ type DingDingNotifier struct {
 
 func (this *DingDingNotifier) Notify(evalContext *alerting.EvalContext) error {
 	this.log.Info("Sending dingding")
-	metrics.M_Alerting_Notification_Sent_DingDing.Inc(1)
 
 	messageUrl, err := evalContext.GetRuleUrl()
 	if err != nil {

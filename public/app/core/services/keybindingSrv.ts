@@ -1,5 +1,3 @@
-///<reference path="../../headers/common.d.ts" />
-
 import $ from 'jquery';
 import _ from 'lodash';
 
@@ -12,13 +10,7 @@ export class KeybindingSrv {
   helpModal: boolean;
 
   /** @ngInject */
-  constructor(
-    private $rootScope,
-    private $modal,
-    private $location,
-    private contextSrv,
-    private $timeout) {
-
+  constructor(private $rootScope, private $location) {
     // clear out all shortcuts on route change
     $rootScope.$on('$routeChangeSuccess', () => {
       Mousetrap.reset();
@@ -31,54 +23,58 @@ export class KeybindingSrv {
 
   setupGlobal() {
     this.bind(['?', 'h'], this.showHelpModal);
-    this.bind("g h", this.goToHome);
-    this.bind("g a", this.openAlerting);
-    this.bind("g p", this.goToProfile);
-    this.bind("s s", this.openSearchStarred);
+    this.bind('g h', this.goToHome);
+    this.bind('g a', this.openAlerting);
+    this.bind('g p', this.goToProfile);
+    this.bind('s s', this.openSearchStarred);
     this.bind('s o', this.openSearch);
     this.bind('s t', this.openSearchTags);
     this.bind('f', this.openSearch);
   }
 
   openSearchStarred() {
-    this.$rootScope.appEvent('show-dash-search', {starred: true});
+    appEvents.emit('show-dash-search', { starred: true });
   }
 
   openSearchTags() {
-    this.$rootScope.appEvent('show-dash-search', {tagsMode: true});
+    appEvents.emit('show-dash-search', { tagsMode: true });
   }
 
   openSearch() {
-    this.$rootScope.appEvent('show-dash-search');
+    appEvents.emit('show-dash-search');
   }
 
   openAlerting() {
-    this.$location.url("/alerting");
+    this.$location.url('/alerting');
   }
 
   goToHome() {
-    this.$location.url("/");
+    this.$location.url('/');
   }
 
   goToProfile() {
-    this.$location.url("/profile");
+    this.$location.url('/profile');
   }
 
   showHelpModal() {
-    appEvents.emit('show-modal', {templateHtml: '<help-modal></help-modal>'});
+    appEvents.emit('show-modal', { templateHtml: '<help-modal></help-modal>' });
   }
 
   bind(keyArg, fn) {
-    Mousetrap.bind(keyArg, evt => {
-      evt.preventDefault();
-      evt.stopPropagation();
-      evt.returnValue = false;
-      return this.$rootScope.$apply(fn.bind(this));
-    }, 'keydown');
+    Mousetrap.bind(
+      keyArg,
+      evt => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        evt.returnValue = false;
+        return this.$rootScope.$apply(fn.bind(this));
+      },
+      'keydown'
+    );
   }
 
-  showDashEditView(view) {
-    var search = _.extend(this.$location.search(), {editview: view});
+  showDashEditView() {
+    var search = _.extend(this.$location.search(), { editview: 'settings' });
     this.$location.search(search);
   }
 
@@ -86,11 +82,7 @@ export class KeybindingSrv {
     this.bind('mod+o', () => {
       dashboard.graphTooltip = (dashboard.graphTooltip + 1) % 3;
       appEvents.emit('graph-hover-clear');
-      scope.broadcastRefresh();
-    });
-
-    this.bind('mod+h', () => {
-      dashboard.hideControls = !dashboard.hideControls;
+      this.$rootScope.$broadcast('refresh');
     });
 
     this.bind('mod+s', e => {
@@ -120,7 +112,7 @@ export class KeybindingSrv {
           fullscreen: true,
           edit: true,
           panelId: dashboard.meta.focusPanelId,
-          toggle: true
+          toggle: true,
         });
       }
     });
@@ -149,14 +141,14 @@ export class KeybindingSrv {
     // share panel
     this.bind('p s', () => {
       if (dashboard.meta.focusPanelId) {
-        var shareScope =  scope.$new();
+        var shareScope = scope.$new();
         var panelInfo = dashboard.getPanelInfoById(dashboard.meta.focusPanelId);
         shareScope.panel = panelInfo.panel;
         shareScope.dashboard = dashboard;
 
         appEvents.emit('show-modal', {
           src: 'public/app/features/dashboard/partials/shareModal.html',
-          scope: shareScope
+          scope: shareScope,
         });
       }
     });
@@ -180,25 +172,29 @@ export class KeybindingSrv {
     });
 
     // collapse all rows
-    this.bind('d C', () => {
+    this.bind('d shift+c', () => {
       for (let row of dashboard.rows) {
         row.collapse = true;
       }
     });
 
     // expand all rows
-    this.bind('d E', () => {
+    this.bind('d shift+e', () => {
       for (let row of dashboard.rows) {
         row.collapse = false;
       }
     });
 
+    this.bind('d n', e => {
+      this.$location.url('/dashboard/new');
+    });
+
     this.bind('d r', () => {
-      scope.broadcastRefresh();
+      this.$rootScope.$broadcast('refresh');
     });
 
     this.bind('d s', () => {
-      this.showDashEditView('settings');
+      this.showDashEditView();
     });
 
     this.bind('d k', () => {
@@ -216,8 +212,14 @@ export class KeybindingSrv {
       }
 
       scope.appEvent('hide-modal');
-      scope.appEvent('hide-dash-editor');
-      scope.appEvent('panel-change-view', {fullscreen: false, edit: false});
+      scope.appEvent('panel-change-view', { fullscreen: false, edit: false });
+
+      // close settings view
+      var search = this.$location.search();
+      if (search.editview) {
+        delete search.editview;
+        this.$location.search(search);
+      }
     });
   }
 }

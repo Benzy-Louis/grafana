@@ -24,7 +24,7 @@ When a user creates a new dashboard, a new dashboard JSON object is initialized 
 
 > Note: In the following JSON, id is shown as null which is the default value assigned to it until a dashboard is saved. Once a dashboard is saved, an integer value is assigned to the `id` field.
 
-```
+```json
 {
   "id": null,
   "title": "New dashboard",
@@ -71,8 +71,8 @@ Each field in the dashboard JSON is explained below with its usage:
 | **timepicker** | timepicker metadata, see [timepicker section](#timepicker) for details |
 | **templating** | templating metadata, see [templating section](#templating) for details |
 | **annotations** | annotations metadata, see [annotations section](#annotations) for details |
-| **schemaVersion** | TODO |
-| **version** | TODO |
+| **schemaVersion** | version of the JSON schema (integer), incremented each time a Grafana update brings changes to the said schema |
+| **version** | version of the dashboard (integer), incremented each time the dashboard is updated |
 | **links** | TODO |
 
 ### rows
