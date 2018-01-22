@@ -326,6 +326,7 @@ class SingleStatCtrl extends MetricsPanelCtrl {
         // special null case
         if (map.value === 'null') {
           if (data.value === null || data.value === void 0) {
+            data.value = 0;
             data.valueFormatted = map.text;
             return;
           }
